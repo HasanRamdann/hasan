@@ -19,30 +19,21 @@ import { GuidedQuestBanner } from './components/GuidedQuestBanner';
 import { GuidedQuestModal } from './components/GuidedQuestModal';
 import { SkillTreeModal } from './components/SkillTreeModal';
 import { EncounterModal } from './components/EncounterModal';
+import { NotificationToastContainer } from './components/NotificationToastContainer';
 import {
-  Bell,
   Volume2,
   VolumeX,
-  Play,
   RotateCcw,
-  Globe,
-  Radio,
-  CheckCircle,
-  AlertTriangle,
-  Info,
-  X,
-  Sparkles,
   Palette,
   HardDrive,
   BookOpen,
+  Radio,
 } from 'lucide-react';
 import { soundFx } from './utils/audio';
 
 const GameMainContent: React.FC = () => {
   const {
     activeTab,
-    notifications,
-    removeNotification,
     settings,
     updateSettings,
     resetGame,
@@ -88,47 +79,8 @@ const GameMainContent: React.FC = () => {
         {/* Top Sticky Navigation & Live Metrics Bar */}
         <Navbar />
 
-        {/* Live Floating Notifications Toast */}
-        <div
-          className={`fixed bottom-6 ${
-            isAr ? 'left-4 sm:left-6' : 'right-4 sm:right-6'
-          } z-50 space-y-2 pointer-events-none max-w-sm w-full`}
-        >
-          {notifications.slice(0, 3).map((notif) => {
-            const message = isAr ? notif.msgAr : notif.msgEn;
-            return (
-              <div
-                key={notif.id}
-                className={`p-3 rounded-xl border shadow-2xl backdrop-blur-md transition-all duration-300 pointer-events-auto flex items-start gap-2.5 ${
-                  notif.type === 'success'
-                    ? 'bg-slate-900/95 border-emerald-500/60 text-emerald-300 shadow-emerald-500/20'
-                    : notif.type === 'warning' || notif.type === 'error'
-                      ? 'bg-slate-900/95 border-amber-500/60 text-amber-300 shadow-amber-500/20'
-                      : 'bg-slate-900/95 border-cyan-500/60 text-cyan-300 shadow-cyan-500/20'
-                }`}
-              >
-                {notif.type === 'success' ? (
-                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                ) : notif.type === 'warning' || notif.type === 'error' ? (
-                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                ) : (
-                  <Info className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1 text-xs min-w-0">
-                  <div className="text-slate-100 font-medium leading-relaxed break-words">{message}</div>
-                  <div className="text-[10px] text-slate-400 mt-1">{notif.time}</div>
-                </div>
-                <button
-                  onClick={() => removeNotification(notif.id)}
-                  className="text-slate-400 hover:text-white p-1 rounded transition-colors shrink-0"
-                  aria-label="Close notification"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        {/* Live Floating Notifications Toast with Auto-Dismiss Countdown Timer */}
+        <NotificationToastContainer />
 
         {/* Main Content View Switcher */}
         <main className="max-w-7xl mx-auto px-3 sm:px-6 py-5 space-y-5">

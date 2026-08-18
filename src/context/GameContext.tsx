@@ -271,6 +271,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
+  // Auto-dismiss initial notification
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== 'init_1'));
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Initialize Cities map
   const [cities, setCities] = useState<Record<string, City>>(() => {
     const map: Record<string, City> = {};
