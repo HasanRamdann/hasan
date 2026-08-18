@@ -1,0 +1,6 @@
+{
+  "name": "Trade Empire Online",
+  "description": "An expansive MMO economic simulation and global trading strategy game featuring dynamic markets, shipping fleets, manufacturing chains, and world trade.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
