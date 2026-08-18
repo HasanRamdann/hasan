@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { useAuth } from '../context/AuthContext';
 import {
   Ship,
   Globe2,
@@ -18,6 +19,7 @@ import {
   Star,
   DollarSign,
   ShieldCheck,
+  ShieldAlert,
   ChevronRight,
   RefreshCw,
   Sparkles,
@@ -35,9 +37,17 @@ import {
   CheckCircle2,
   Target,
   Zap,
+  Radio,
+  Cloud,
+  CloudCheck,
+  CloudUpload,
+  User,
+  LogIn,
 } from 'lucide-react';
 import { soundFx } from '../utils/audio';
 import { GlobalNewsTicker } from './GlobalNewsTicker';
+import { AuthModal } from './AuthModal';
+import { OnlineCommunityModal } from './OnlineCommunityModal';
 
 export const Navbar: React.FC = () => {
   const {
@@ -75,7 +85,18 @@ export const Navbar: React.FC = () => {
     startNewGame,
   } = useGame();
 
+  const {
+    currentUser,
+    userProfile,
+    isAdmin,
+    setIsAuthModalOpen,
+    setAuthModalMode,
+    lastCloudSaveTime,
+    isSyncingCloud,
+  } = useAuth();
+
   const [showNotifs, setShowNotifs] = useState(false);
+  const [isOnlineRadioOpen, setIsOnlineRadioOpen] = useState(false);
   const isAr = settings.language === 'ar';
 
   const inTransitCount = ships.filter((s) => s.status === 'transit').length;
@@ -115,6 +136,7 @@ export const Navbar: React.FC = () => {
     { id: 'finance', icon: Landmark, labelEn: 'Banking & Stocks', labelAr: 'البنك والأسهم' },
     { id: 'campaign', icon: Award, labelEn: 'Missions & Quests', labelAr: 'المهام والموسم' },
     { id: 'alliances', icon: Users2, labelEn: 'Alliances & Top', labelAr: 'التحالفات والمتصدرين' },
+    ...(isAdmin ? [{ id: 'admin', icon: ShieldAlert, labelEn: 'Admin God-Mode', labelAr: '👑 لوحة الأدمن', badge: 'ROOT' }] : []),
   ];
 
   return (
@@ -286,6 +308,75 @@ export const Navbar: React.FC = () => {
           >
             <Palette className="w-3.5 h-3.5 text-cyan-400" />
             <span className="hidden md:inline">{isAr ? 'الواجهة' : 'Theme'}</span>
+          </button>
+
+          {/* Online Global Radio & Chat Launcher */}
+          <button
+            onClick={() => {
+              soundFx.playClick();
+              setIsOnlineRadioOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/40 hover:border-emerald-400 rounded-xl text-emerald-300 hover:text-emerald-200 text-xs font-bold transition-all shadow-sm shadow-emerald-500/10 relative"
+            title={isAr ? 'الراديو العام وشات التجار المباشر' : 'Live Global Radio & Chat'}
+          >
+            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span className="hidden lg:inline">{isAr ? 'راديو التجار' : 'Radio'}</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute -top-0.5 -right-0.5" />
+          </button>
+
+          {/* Master Admin God-Mode Quick Trigger */}
+          {isAdmin && (
+            <button
+              onClick={() => {
+                soundFx.playClick();
+                setActiveTab('admin');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-red-600 via-amber-500 to-yellow-500 text-slate-950 rounded-xl font-black text-xs shadow-lg shadow-amber-500/25 animate-pulse transition-all transform active:scale-95"
+              title={isAr ? 'لوحة تحكم القائد الأعلى (Admin God-Mode)' : 'Master Admin Control Panel'}
+            >
+              <Crown className="w-3.5 h-3.5 fill-slate-950" />
+              <span>{isAr ? 'تحكم الأدمن' : 'Admin'}</span>
+            </button>
+          )}
+
+          {/* Online Player Account & Cloud Save Button */}
+          <button
+            onClick={() => {
+              soundFx.playClick();
+              setIsAuthModalOpen(true);
+            }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+              currentUser && userProfile
+                ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-amber-400/50 text-amber-300 shadow-md shadow-amber-500/10'
+                : 'bg-gradient-to-r from-blue-600/30 to-indigo-600/30 border-blue-400/50 text-blue-300 hover:from-blue-600/40 hover:to-indigo-600/40'
+            }`}
+            title={
+              currentUser && userProfile
+                ? isAr
+                  ? `حساب أونلاين: @${userProfile.username} (حفظ سحابي نشط)`
+                  : `Online: @${userProfile.username} (Cloud Save Active)`
+                : isAr
+                  ? 'تسجيل الدخول / إنشاء حساب لحفظ التقدم أونلاين'
+                  : 'Login / Register for Online Cloud Saves'
+            }
+          >
+            {currentUser && userProfile ? (
+              <>
+                <div className="relative">
+                  <User className="w-3.5 h-3.5 text-amber-300" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute -bottom-0.5 -right-0.5" />
+                </div>
+                <span className="font-extrabold text-amber-200 max-w-[90px] truncate">
+                  @{userProfile.username}
+                </span>
+                <Cloud className={`w-3.5 h-3.5 ${isSyncingCloud ? 'text-amber-400 animate-bounce' : 'text-emerald-400'}`} />
+              </>
+            ) : (
+              <>
+                <LogIn className="w-3.5 h-3.5 text-blue-300" />
+                <span className="font-bold">{isAr ? 'حساب أونلاين' : 'Online Account'}</span>
+              </>
+            )}
           </button>
 
           {/* Game Speed Controls */}
@@ -485,6 +576,15 @@ export const Navbar: React.FC = () => {
           <span>{isAr ? '📘 كيف تلعب اللعبة؟' : '📘 How to Play?'}</span>
         </button>
       </nav>
+
+      {/* Online MMO Player Authentication Modal */}
+      <AuthModal />
+
+      {/* Online MMO Community Radio & Global Chat Modal */}
+      <OnlineCommunityModal
+        isOpen={isOnlineRadioOpen}
+        onClose={() => setIsOnlineRadioOpen(false)}
+      />
     </header>
   );
 };

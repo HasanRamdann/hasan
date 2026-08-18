@@ -379,4 +379,64 @@ export interface SkillDefinition {
   };
 }
 
+export interface OnlineUserProfile {
+  uid: string;
+  username: string;
+  email: string;
+  companyName: string;
+  ceoName: string;
+  avatar: string;
+  level: number;
+  netWorth: number;
+  reputation: number;
+  fleetCount: number;
+  isOnline: boolean;
+  isAdmin?: boolean;
+  role?: 'admin' | 'player';
+  lastLoginAt: string;
+  createdAt: string;
+}
+
+export interface CloudSaveData {
+  cash: number;
+  bankBalance?: number;
+  debt?: number;
+  companyName: string;
+  ceoName: string;
+  companyAvatar: string;
+  archetype?: string;
+  hqCityId: string;
+  reputation: number;
+  level: number;
+  exp: number;
+  ships: PlayerShip[];
+  cities: Record<string, City>;
+  factories: PlayerFactory[];
+  availableContracts?: TradeContract[];
+  activeContracts?: TradeContract[];
+  loans?: BankLoan[];
+  stocks?: CorporationStock[];
+  missions?: Mission[];
+  alliances?: TradeAlliance[];
+  guidedQuests?: GuidedQuest[];
+  skillPoints?: number;
+  unlockedSkills: string[];
+  settings: GameSettings;
+  lastSavedAt: string;
+  savedByUid?: string;
+  savedByUsername?: string;
+}
+
+export interface GlobalChatMessage {
+  id: string;
+  senderId: string;
+  senderUsername: string;
+  senderCompany: string;
+  senderAvatar: string;
+  senderLevel: number;
+  text: string;
+  timestamp: number;
+}
+
+
 

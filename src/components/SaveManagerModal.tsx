@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useGame } from '../context/GameContext';
+import { useAuth } from '../context/AuthContext';
 import { SaveSlotInfo } from '../types/game';
 import {
   Save,
@@ -19,6 +20,10 @@ import {
   Ship,
   DollarSign,
   Award,
+  Cloud,
+  CloudUpload,
+  User,
+  LogIn,
 } from 'lucide-react';
 import { soundFx } from '../utils/audio';
 
@@ -38,12 +43,21 @@ export const SaveManagerModal: React.FC<SaveManagerModalProps> = ({
     getSlotsSummary,
     exportSaveData,
     importSaveData,
+    saveGameCloud,
+    loadGameCloud,
     lastSavedTimeText,
     isAutoSaving,
     currentSaveSlot,
     startNewGame,
     addNotification,
   } = useGame();
+
+  const {
+    currentUser,
+    userProfile,
+    setIsAuthModalOpen,
+    isSyncingCloud,
+  } = useAuth();
 
   const isAr = settings.language === 'ar';
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,6 +192,70 @@ export const SaveManagerModal: React.FC<SaveManagerModalProps> = ({
             <Save className="w-3.5 h-3.5" />
             <span>{isAr ? 'حفظ يدوي فوري الآن' : 'Save Now'}</span>
           </button>
+        </div>
+
+        {/* Online MMO Cloud Account & Sync Section */}
+        <div className="p-4 bg-gradient-to-r from-blue-950/40 via-indigo-950/40 to-slate-950/60 border border-blue-500/30 rounded-2xl space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+                <Cloud className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-blue-300 flex items-center gap-1.5">
+                  <span>{isAr ? '☁️ الحفظ السحابي والأونلاين (Online Cloud Save)' : '☁️ Online Cloud Save & Account'}</span>
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  {currentUser && userProfile ? (
+                    <span className="text-emerald-400 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                      {isAr ? `مسجل باسم: @${userProfile.username}` : `Logged in as: @${userProfile.username}`}
+                    </span>
+                  ) : (
+                    <span>{isAr ? 'العب كزائر - سجل دخولك لحفظ بياناتك في السحابة ومزامنتها على أي جهاز' : 'Playing as Guest. Login to sync progress across any device.'}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {currentUser && userProfile ? (
+                <>
+                  <button
+                    onClick={async () => {
+                      await saveGameCloud();
+                    }}
+                    disabled={isSyncingCloud}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+                  >
+                    <CloudUpload className="w-3.5 h-3.5" />
+                    <span>{isAr ? 'مزامنة وحفظ سحابي' : 'Sync to Cloud'}</span>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const ok = await loadGameCloud();
+                      if (ok) onClose();
+                    }}
+                    disabled={isSyncingCloud}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-bold transition-all active:scale-95"
+                  >
+                    <HardDrive className="w-3.5 h-3.5" />
+                    <span>{isAr ? 'تحميل من السحابة' : 'Restore Cloud Save'}</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-extrabold shadow-md hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>{isAr ? 'تسجيل الدخول / إنشاء حساب' : 'Login / Register'}</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* 3 Save Slots List */}

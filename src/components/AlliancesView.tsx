@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { useAuth } from '../context/AuthContext';
 import { TradeAlliance, LeaderboardPlayer } from '../types/game';
 import {
   Users2,
@@ -12,28 +13,49 @@ import {
   Ship,
   Factory,
   Globe2,
+  Radio,
+  User,
+  LogIn,
 } from 'lucide-react';
 import { soundFx } from '../utils/audio';
+import { OnlineCommunityModal } from './OnlineCommunityModal';
 
 export const AlliancesView: React.FC = () => {
   const { alliances, leaderboard, joinAlliance, settings } = useGame();
+  const { currentUser, userProfile, setIsAuthModalOpen } = useAuth();
+  const [isCommunityOpen, setIsCommunityOpen] = useState(false);
   const isAr = settings.language === 'ar';
 
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-5 h-5 text-amber-400" />
-          <h2 className="text-base font-bold text-white">
-            {isAr ? 'التحالفات التجارية وقائمة المتصدرين العالمية' : 'Global Trade Alliances & MMO Leaderboards'}
-          </h2>
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-5 h-5 text-amber-400" />
+            <h2 className="text-base font-bold text-white">
+              {isAr ? 'التحالفات التجارية وراديو التجار المباشر' : 'Global Trade Alliances & Live MMO Radio'}
+            </h2>
+          </div>
+          <p className="text-xs text-slate-400">
+            {isAr
+              ? 'انضم إلى أقوى التكتلات الاقتصادية، وتحدث مع التجار واللاعبين مباشرة عبر الراديو العام، وتنافس في لوحة الشرف العالمية.'
+              : 'Join premier trade syndicates, chat in real-time with captains worldwide via Global Radio, and climb the live leaderboards.'}
+          </p>
         </div>
-        <p className="text-xs text-slate-400">
-          {isAr
-            ? 'انضم إلى أقوى التكتلات الاقتصادية واكسب امتيازات تخفيض الضرائب وسرعة الأسطول، وتنافس للوصول للمركز الأول.'
-            : 'Join premier trade syndicates for exclusive fleet speed & tax exemptions, and climb to the top of global rankings.'}
-        </p>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => {
+              soundFx.playClick();
+              setIsCommunityOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+          >
+            <Radio className="w-4 h-4 animate-pulse" />
+            <span>{isAr ? '📻 راديو وتصنيف التجار المباشر' : '📻 Open Live Radio & Chat'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -179,6 +201,11 @@ export const AlliancesView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <OnlineCommunityModal
+        isOpen={isCommunityOpen}
+        onClose={() => setIsCommunityOpen(false)}
+      />
     </div>
   );
 };

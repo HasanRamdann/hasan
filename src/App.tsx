@@ -1,6 +1,8 @@
 import React from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { GameProvider, useGame } from './context/GameContext';
 import { Navbar } from './components/Navbar';
+import { OnlineAuthGate } from './components/OnlineAuthGate';
 import { CommandCenterView } from './components/CommandCenterView';
 import { WorldMapView } from './components/WorldMapView';
 import { MarketView } from './components/MarketView';
@@ -10,6 +12,7 @@ import { ContractsView } from './components/ContractsView';
 import { FinanceView } from './components/FinanceView';
 import { CampaignView } from './components/CampaignView';
 import { AlliancesView } from './components/AlliancesView';
+import { AdminDashboardView } from './components/AdminDashboardView';
 import { CityDetailModal } from './components/CityDetailModal';
 import { HowToPlayModal } from './components/HowToPlayModal';
 import { OnboardingModal } from './components/OnboardingModal';
@@ -32,6 +35,7 @@ import {
 import { soundFx } from './utils/audio';
 
 const GameMainContent: React.FC = () => {
+  const { currentUser, isGuestSession, isLoadingAuth } = useAuth();
   const {
     activeTab,
     settings,
@@ -55,6 +59,26 @@ const GameMainContent: React.FC = () => {
   } = useGame();
 
   const isAr = settings.language === 'ar';
+
+  // If initial auth is still verifying with Firebase
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center space-y-4 font-sans select-none">
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-3xl animate-bounce">
+          ⚓
+        </div>
+        <div className="text-sm font-bold text-amber-400 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          <span>{isAr ? 'جاري الاتصال بالخادم السحابي...' : 'Connecting to Cloud Servers...'}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is not logged in and hasn't chosen guest mode -> Show Online Login/Register First
+  if (!currentUser && !isGuestSession) {
+    return <OnlineAuthGate />;
+  }
 
   const getThemeContainerClass = () => {
     switch (settings.theme) {
@@ -96,6 +120,7 @@ const GameMainContent: React.FC = () => {
           {activeTab === 'finance' && <FinanceView />}
           {activeTab === 'campaign' && <CampaignView />}
           {activeTab === 'alliances' && <AlliancesView />}
+          {activeTab === 'admin' && <AdminDashboardView />}
         </main>
       </div>
 
@@ -219,8 +244,10 @@ const GameMainContent: React.FC = () => {
 
 export default function App() {
   return (
-    <GameProvider>
-      <GameMainContent />
-    </GameProvider>
+    <AuthProvider>
+      <GameProvider>
+        <GameMainContent />
+      </GameProvider>
+    </AuthProvider>
   );
 }

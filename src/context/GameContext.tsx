@@ -47,6 +47,7 @@ import { INITIAL_GUIDED_QUESTS } from '../data/questData';
 import { SKILL_TREE_DEFINITIONS } from '../data/skillData';
 import { ENCOUNTER_TEMPLATES } from '../data/encounterData';
 import { soundFx } from '../utils/audio';
+import { auth, db, doc, getDoc, setDoc, updateDoc } from '../lib/firebase';
 
 const STORAGE_KEY = 'trade_empire_online_save_v1';
 const SLOT_PREFIX = 'trade_empire_slot_';
@@ -145,6 +146,8 @@ interface GameContextType {
   getSlotsSummary: () => SaveSlotInfo[];
   exportSaveData: () => string;
   importSaveData: (jsonStr: string) => boolean;
+  saveGameCloud: () => Promise<boolean>;
+  loadGameCloud: () => Promise<boolean>;
   applyStartingSetup: (config: StartingSetupConfig) => void;
   startNewGame: () => void;
 
@@ -175,6 +178,29 @@ interface GameContextType {
   addNotification: (msgEn: string, msgAr: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
   notifications: Array<{ id: string; msgEn: string; msgAr: string; type: string; time: string }>;
   removeNotification: (id: string) => void;
+
+  // Master Admin God-Mode Controls
+  setCashDirectly: (amount: number) => void;
+  addCashDirectly: (amount: number) => void;
+  setBankBalanceDirectly: (amount: number) => void;
+  setDebtDirectly: (amount: number) => void;
+  setLevelDirectly: (lvl: number) => void;
+  setReputationDirectly: (rep: number) => void;
+  setSkillPointsDirectly: (pts: number) => void;
+  unlockAllSkillsDirectly: () => void;
+  completeAllQuestsDirectly: () => void;
+  maxAllShipsDirectly: () => void;
+  instantFinishAllVoyages: () => void;
+  addShipInstantly: (modelId: string, customName?: string) => void;
+  maxAllWarehousesAndBranches: () => void;
+  fillAllWarehousesDirectly: (qty?: number) => void;
+  buildAllFactoriesInstantly: () => void;
+  spawnCustomWorldEvent: (event: Partial<WorldEvent>) => void;
+  clearAllWorldEvents: () => void;
+  boostAllStockPrices: (multiplier: number) => void;
+  grantStockShares: (symbol: string, count: number) => void;
+  setCustomMarketPrice: (commodityId: string, price: number) => void;
+  resetMarketPricesToNormal: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -937,6 +963,162 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
     [applyStateFromObject, saveGameToSlot, currentSaveSlot, addNotification]
   );
+
+  // Cloud Save & Cloud Restore Functions
+  const saveGameCloud = useCallback(async (): Promise<boolean> => {
+    const user = auth.currentUser;
+    if (!user) {
+      addNotification(
+        'Please login to save to the cloud!',
+        'يرجى تسجيل الدخول أو إنشاء حساب لحفظ إمبراطوريتك سحابياً!',
+        'warning'
+      );
+      return false;
+    }
+
+    try {
+      setIsAutoSaving(true);
+      const saveObj = {
+        version: 1,
+        lastSavedTimestamp: Date.now(),
+        lastSavedAt: new Date().toISOString(),
+        savedByUid: user.uid,
+        companyName,
+        ceoName,
+        companyAvatar,
+        archetype,
+        cash,
+        bankBalance,
+        debt,
+        level,
+        exp,
+        reputation,
+        hqCityId,
+        cities,
+        ships,
+        factories,
+        marketPrices,
+        availableContracts,
+        activeContracts,
+        stocks,
+        loans,
+        worldEvents,
+        missions,
+        alliances,
+        stats,
+        settings,
+        guidedQuests,
+        skillPoints,
+        unlockedSkills,
+      };
+
+      await setDoc(doc(db, 'saves', user.uid), saveObj);
+
+      // Also update user profile summary for leaderboard
+      await updateDoc(doc(db, 'users', user.uid), {
+        level,
+        cash,
+        reputation,
+        fleetCount: ships.length,
+        companyName,
+        ceoName,
+        avatar: companyAvatar,
+        lastLoginAt: new Date().toISOString(),
+      }).catch(() => {});
+
+      setIsAutoSaving(false);
+      setLastSavedTimestamp(Date.now());
+      setLastSavedTimeText(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      soundFx.playSuccess();
+      addNotification(
+        'Online Cloud Save Synchronized Successfully! ☁️',
+        'تم حفظ ومزامنة إمبراطوريتك سحابياً بنجاح! ☁️',
+        'success'
+      );
+      return true;
+    } catch (err: any) {
+      setIsAutoSaving(false);
+      console.error('Cloud save failed:', err);
+      addNotification(
+        'Failed to sync save to cloud.',
+        'تعذر الحفظ في السحابة. تأكد من اتصال الإنترنت.',
+        'error'
+      );
+      return false;
+    }
+  }, [
+    companyName,
+    ceoName,
+    companyAvatar,
+    archetype,
+    cash,
+    bankBalance,
+    debt,
+    level,
+    exp,
+    reputation,
+    hqCityId,
+    cities,
+    ships,
+    factories,
+    marketPrices,
+    availableContracts,
+    activeContracts,
+    stocks,
+    loans,
+    worldEvents,
+    missions,
+    alliances,
+    stats,
+    settings,
+    guidedQuests,
+    skillPoints,
+    unlockedSkills,
+    addNotification,
+  ]);
+
+  const loadGameCloud = useCallback(async (): Promise<boolean> => {
+    const user = auth.currentUser;
+    if (!user) {
+      addNotification('No user logged in.', 'لم يتم تسجيل الدخول بعد.', 'warning');
+      return false;
+    }
+
+    try {
+      setIsAutoSaving(true);
+      const docSnap = await getDoc(doc(db, 'saves', user.uid));
+      setIsAutoSaving(false);
+
+      if (!docSnap.exists()) {
+        addNotification(
+          'No cloud save found for this user account. Saving current progress now...',
+          'لا يوجد حفظ سحابي سابق لهذا الحساب. جاري حفظ تقدمك الحالي الآن...',
+          'info'
+        );
+        await saveGameCloud();
+        return true;
+      }
+
+      const parsed = docSnap.data();
+      applyStateFromObject(parsed);
+      soundFx.playFanfare();
+      addNotification(
+        'Cloud Save Restored Successfully! ☁️',
+        'تم استرجاع وتحميل إمبراطوريتك من السحابة بنجاح! ☁️',
+        'success'
+      );
+      return true;
+    } catch (err: any) {
+      setIsAutoSaving(false);
+      console.error('Cloud load failed:', err);
+      addNotification(
+        'Failed to load save from cloud.',
+        'تعذر تحميل الحفظ من السحابة.',
+        'error'
+      );
+      return false;
+    }
+  }, [applyStateFromObject, saveGameCloud, addNotification]);
 
   // Apply Starting Setup Config (New Player / New Game Setup)
   const applyStartingSetup = useCallback(
@@ -2308,6 +2490,259 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.location.reload();
   }, []);
 
+  // ================= ADMIN GOD-MODE CONTROLS =================
+  const setCashDirectly = useCallback((amount: number) => {
+    setCash(Math.max(0, amount));
+    soundFx.playReward();
+  }, []);
+
+  const addCashDirectly = useCallback((amount: number) => {
+    setCash((prev) => Math.max(0, prev + amount));
+    soundFx.playReward();
+  }, []);
+
+  const setBankBalanceDirectly = useCallback((amount: number) => {
+    setBankBalance(Math.max(0, amount));
+    soundFx.playSuccess();
+  }, []);
+
+  const setDebtDirectly = useCallback((amount: number) => {
+    setDebt(Math.max(0, amount));
+    soundFx.playSuccess();
+  }, []);
+
+  const setLevelDirectly = useCallback((lvl: number) => {
+    setLevel(Math.max(1, Math.min(99, lvl)));
+    soundFx.playSuccess();
+  }, []);
+
+  const setReputationDirectly = useCallback((rep: number) => {
+    setReputation(Math.max(0, rep));
+    soundFx.playSuccess();
+  }, []);
+
+  const setSkillPointsDirectly = useCallback((pts: number) => {
+    setSkillPoints((prev) => Math.max(0, prev + pts));
+    soundFx.playSuccess();
+  }, []);
+
+  const unlockAllSkillsDirectly = useCallback(() => {
+    const allIds = SKILL_TREE_DEFINITIONS.map((s) => s.id);
+    setUnlockedSkills(allIds);
+    soundFx.playReward();
+  }, []);
+
+  const completeAllQuestsDirectly = useCallback(() => {
+    setGuidedQuests((prev) =>
+      prev.map((q) => ({
+        ...q,
+        isCompleted: true,
+        isClaimed: true,
+        currentProgress: q.targetCount,
+      }))
+    );
+    setMissions((prev) =>
+      prev.map((m) => ({
+        ...m,
+        isCompleted: true,
+        isClaimed: true,
+        currentValue: m.targetValue,
+      }))
+    );
+    setCash((prev) => prev + 5000000);
+    setReputation((prev) => prev + 100);
+    soundFx.playReward();
+  }, []);
+
+  const maxAllShipsDirectly = useCallback(() => {
+    setShips((prev) =>
+      prev.map((s) => ({
+        ...s,
+        capacity: Math.max(s.capacity, 25000),
+        upgrades: {
+          engineLevel: 5,
+          holdExpansion: 5,
+          fuelEfficiency: 5,
+          securityInsurance: 5,
+        },
+      }))
+    );
+    soundFx.playReward();
+  }, []);
+
+  const instantFinishAllVoyages = useCallback(() => {
+    setShips((prev) =>
+      prev.map((s) => {
+        if (s.status === 'transit') {
+          return {
+            ...s,
+            status: 'docked' as const,
+            currentCityId: s.destinationCityId || s.currentCityId,
+            destinationCityId: null,
+            voyageStartTime: null,
+            voyageDurationMs: 0,
+          };
+        }
+        return s;
+      })
+    );
+    soundFx.playSuccess();
+  }, []);
+
+  const addShipInstantly = useCallback(
+    (modelId: string, customName?: string) => {
+      const model = SHIP_MODELS.find((m) => m.id === modelId) || SHIP_MODELS[0];
+      const newShip: PlayerShip = {
+        id: `ship_admin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        customName: customName || `God-Ship ${model.name}`,
+        modelId: model.id,
+        capacity: model.capacity * 2,
+        currentCityId: hqCityId || 'alexandria',
+        destinationCityId: null,
+        voyageStartTime: null,
+        voyageDurationMs: 0,
+        cargo: {},
+        cargoUsed: 0,
+        status: 'docked',
+        upgrades: {
+          engineLevel: 5,
+          holdExpansion: 5,
+          fuelEfficiency: 5,
+          securityInsurance: 5,
+        },
+        totalTripsCompleted: 25,
+        totalProfitGenerated: 5000000,
+      };
+      setShips((prev) => [newShip, ...prev]);
+      soundFx.playCash();
+    },
+    [hqCityId]
+  );
+
+  const maxAllWarehousesAndBranches = useCallback(() => {
+    setCities((prev) => {
+      const updated: Record<string, City> = {};
+      Object.keys(prev).forEach((cityId) => {
+        updated[cityId] = {
+          ...prev[cityId],
+          hasBranch: true,
+          branchLevel: 5,
+          warehouseCapacity: 50000,
+        };
+      });
+      return updated;
+    });
+    soundFx.playReward();
+  }, []);
+
+  const fillAllWarehousesDirectly = useCallback((qty: number = 500) => {
+    setCities((prev) => {
+      const updated: Record<string, City> = {};
+      Object.keys(prev).forEach((cityId) => {
+        const inventory: Record<string, number> = {};
+        COMMODITIES.forEach((c) => {
+          inventory[c.id] = qty;
+        });
+        updated[cityId] = {
+          ...prev[cityId],
+          hasBranch: true,
+          warehouseCapacity: Math.max(prev[cityId].warehouseCapacity, 50000),
+          warehouseUsed: COMMODITIES.length * qty,
+          warehouseInventory: inventory,
+        };
+      });
+      return updated;
+    });
+    soundFx.playReward();
+  }, []);
+
+  const buildAllFactoriesInstantly = useCallback(() => {
+    const newFactories: PlayerFactory[] = [];
+    const cityIds = Object.keys(cities);
+    PRODUCTION_RECIPES.forEach((rec, idx) => {
+      const cityId = cityIds[idx % cityIds.length] || 'alexandria';
+      newFactories.push({
+        id: `fac_admin_${rec.id}_${idx}`,
+        recipeId: rec.id,
+        cityId,
+        level: 5,
+        isProducing: true,
+        cycleProgress: 50,
+        cycleStartTimestamp: Date.now(),
+        cyclesCompleted: 20,
+        autoRestart: true,
+      });
+    });
+    setFactories(newFactories);
+    soundFx.playReward();
+  }, [cities]);
+
+  const spawnCustomWorldEvent = useCallback(
+    (event: Partial<WorldEvent>) => {
+      triggerWorldEvent(event);
+    },
+    [triggerWorldEvent]
+  );
+
+  const clearAllWorldEvents = useCallback(() => {
+    setWorldEvents([]);
+    soundFx.playSuccess();
+  }, []);
+
+  const boostAllStockPrices = useCallback((multiplier: number) => {
+    setStocks((prev) =>
+      prev.map((st) => ({
+        ...st,
+        currentPrice: Math.round(st.currentPrice * multiplier),
+      }))
+    );
+    soundFx.playReward();
+  }, []);
+
+  const grantStockShares = useCallback((symbol: string, count: number) => {
+    setStocks((prev) =>
+      prev.map((st) =>
+        st.symbol === symbol
+          ? { ...st, playerShares: (st.playerShares || 0) + count }
+          : st
+      )
+    );
+    soundFx.playReward();
+  }, []);
+
+  const setCustomMarketPrice = useCallback((commodityId: string, price: number) => {
+    setMarketPrices((prev) => {
+      const existing = prev[commodityId];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [commodityId]: {
+          ...existing,
+          currentPrice: Math.max(1, price),
+        },
+      };
+    });
+    soundFx.playClick();
+  }, []);
+
+  const resetMarketPricesToNormal = useCallback(() => {
+    const initial: Record<string, MarketPrice> = {};
+    COMMODITIES.forEach((c) => {
+      initial[c.id] = {
+        commodityId: c.id,
+        currentPrice: c.basePrice,
+        previousPrice: c.basePrice,
+        basePrice: c.basePrice,
+        priceHistory: [c.basePrice, c.basePrice, c.basePrice],
+        change24hPercent: 0,
+        trend: 'stable',
+        globalStockPiles: 5000,
+      };
+    });
+    setMarketPrices(initial);
+    soundFx.playSuccess();
+  }, []);
+
   return (
     <GameContext.Provider
       value={{
@@ -2380,6 +2815,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getSlotsSummary,
         exportSaveData,
         importSaveData,
+        saveGameCloud,
+        loadGameCloud,
         applyStartingSetup,
         startNewGame,
         updateSettings,
@@ -2408,6 +2845,28 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addNotification,
         notifications,
         removeNotification,
+        // Master Admin God-Mode Controls
+        setCashDirectly,
+        addCashDirectly,
+        setBankBalanceDirectly,
+        setDebtDirectly,
+        setLevelDirectly,
+        setReputationDirectly,
+        setSkillPointsDirectly,
+        unlockAllSkillsDirectly,
+        completeAllQuestsDirectly,
+        maxAllShipsDirectly,
+        instantFinishAllVoyages,
+        addShipInstantly,
+        maxAllWarehousesAndBranches,
+        fillAllWarehousesDirectly,
+        buildAllFactoriesInstantly,
+        spawnCustomWorldEvent,
+        clearAllWorldEvents,
+        boostAllStockPrices,
+        grantStockShares,
+        setCustomMarketPrice,
+        resetMarketPricesToNormal,
       }}
     >
       {children}

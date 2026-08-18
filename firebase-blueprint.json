@@ -1,0 +1,61 @@
+{
+  "$schema": "https://firebase.google.com/schemas/firestore/blueprint/v1.json",
+  "entities": {
+    "UserProfile": {
+      "collection": "users",
+      "fields": {
+        "username": { "type": "string", "description": "Unique username chosen by player" },
+        "companyName": { "type": "string", "description": "Player maritime corporation title" },
+        "ceoName": { "type": "string", "description": "CEO player identity" },
+        "avatar": { "type": "string", "description": "Avatar badge" },
+        "level": { "type": "number", "description": "Tycoon level" },
+        "netWorth": { "type": "number", "description": "Calculated total empire net worth" },
+        "reputation": { "type": "number", "description": "Maritime reputation rating" },
+        "isOnline": { "type": "boolean", "description": "Live online presence state" },
+        "lastLoginAt": { "type": "string", "description": "Timestamp of last session activity" },
+        "createdAt": { "type": "string", "description": "Account registration timestamp" }
+      }
+    },
+    "UsernameRegistry": {
+      "collection": "usernames",
+      "fields": {
+        "uid": { "type": "string", "description": "User UID linked to this username" },
+        "username": { "type": "string", "description": "Registered unique username" },
+        "createdAt": { "type": "string", "description": "Registration time" }
+      }
+    },
+    "CloudSave": {
+      "collection": "saves",
+      "fields": {
+        "cash": { "type": "number", "description": "Current liquid cash balance" },
+        "companyName": { "type": "string", "description": "Company title" },
+        "ceoName": { "type": "string", "description": "CEO title" },
+        "companyAvatar": { "type": "string", "description": "Selected avatar badge" },
+        "hqCityId": { "type": "string", "description": "Headquarters port city ID" },
+        "reputation": { "type": "number", "description": "Corporate reputation score" },
+        "level": { "type": "number", "description": "Tycoon level" },
+        "exp": { "type": "number", "description": "Experience points" },
+        "ships": { "type": "array", "description": "Fleet of ships owned" },
+        "cities": { "type": "object", "description": "City warehouse states and inventories" },
+        "factories": { "type": "array", "description": "Industrial production facilities" },
+        "contracts": { "type": "array", "description": "Signed trade contracts" },
+        "bank": { "type": "object", "description": "Bank account, loans, deposits" },
+        "unlockedSkills": { "type": "array", "description": "Mastered CEO talent tree skills" },
+        "settings": { "type": "object", "description": "Player game settings and theme preferences" },
+        "lastSavedAt": { "type": "string", "description": "ISO timestamp of last cloud save" },
+        "savedBy": { "type": "string", "description": "Username or UID of author" }
+      }
+    },
+    "GlobalChatMessage": {
+      "collection": "global_chat",
+      "fields": {
+        "senderId": { "type": "string", "description": "User ID of sender" },
+        "senderUsername": { "type": "string", "description": "Display username" },
+        "senderCompany": { "type": "string", "description": "Company name" },
+        "senderAvatar": { "type": "string", "description": "Avatar badge" },
+        "text": { "type": "string", "description": "Message text" },
+        "timestamp": { "type": "string", "description": "Message timestamp" }
+      }
+    }
+  }
+}
